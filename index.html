@@ -42,7 +42,7 @@
     .dot:nth-child(3){animation-delay:.3s}
     @keyframes bounce{0%,80%,100%{transform:translateY(0)}40%{transform:translateY(-6px)}}
 
-    .bubble{background:#007aff;color:#fff;padding:14px 16px;border-radius:18px;font-size:16px;display:inline-block;text-align:left;max-width:86%}
+    .bubble{background:#007aff;color:#fff;padding:14px 16px;border-radius:18px;font-size:16px;display:inline-block;text-align:left;max-width:86%; white-space: pre-wrap;}
 
     /* install banner */
     #installBanner{position:fixed;left:16px;right:16px;bottom:22px;background:rgba(255,255,255,0.98);backdrop-filter:blur(10px);padding:12px;border-radius:14px;box-shadow:0 10px 30px rgba(0,0,0,0.12);display:flex;align-items:center;gap:12px;z-index:20}
@@ -126,13 +126,12 @@
     const audioCtx = AudioContext ? new AudioContext() : null;
     function playDing(){if(!audioCtx) return; const o = audioCtx.createOscillator(); const g = audioCtx.createGain(); o.type='sine'; o.frequency.setValueAtTime(1200,audioCtx.currentTime); g.gain.setValueAtTime(0.0001,audioCtx.currentTime); g.gain.exponentialRampToValueAtTime(0.1,audioCtx.currentTime+0.01); o.connect(g); g.connect(audioCtx.destination); o.start(); o.frequency.exponentialRampToValueAtTime(800,audioCtx.currentTime+0.18); g.gain.exponentialRampToValueAtTime(0.0001,audioCtx.currentTime+0.35); setTimeout(()=>{o.stop()},420)}
 
-    // show final message after progress
+    // -- Typewriter final message
     function showFinalMessage(){
-      updateBox.style.display='none';
-      messageBox.style.display='block';
-      messageBox.innerHTML = `<div class="typing"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>`;
-      setTimeout(()=>{
-        messageBox.innerHTML = `<div class="bubble">Update complete...
+      updateBox.style.display = 'none';
+      messageBox.style.display = 'block';
+
+      const fullMessage = `Update complete...
 
 It’s me again — it’s that time again. I can’t even remember how many times I’ve done this, to the point that it feels like I ask you this every month. Maybe by now, you find me corny or even a little cringe. But you know what they say, it’s real when it’s corny. Eme lang, I totally made that up.
 
@@ -146,9 +145,25 @@ I don’t know how many times I’ve asked this, but like I always say, I don't 
 
 Mj, let me be there to end this year with you, and start another one with you.
 
-Will you be my girlfriend again?</div>`;
-        if(audioCtx && audioCtx.state === 'suspended'){audioCtx.resume().then(()=>{playDing();});} else {playDing();}
-      },1400);
+Will you be my girlfriend again?`;
+
+      messageBox.innerHTML = `<div class="bubble"></div>`;
+      const bubble = messageBox.querySelector('.bubble');
+      let index = 0;
+
+      function typeWriter() {
+        if (index < fullMessage.length) {
+          bubble.innerHTML += fullMessage.charAt(index) === '\n' ? '<br>' : fullMessage.charAt(index);
+          index++;
+          setTimeout(typeWriter, 25); // typing speed in ms
+        } else {
+          if(audioCtx && audioCtx.state === 'suspended'){
+            audioCtx.resume().then(()=>{playDing();});
+          } else { playDing(); }
+        }
+      }
+
+      typeWriter();
     }
 
     function startInstall(){
