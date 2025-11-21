@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <title>Relationship OS — Update</title>
+  <link rel="manifest" href="/manifest.json">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="theme-color" content="#f2f2f7">
+  <link rel="apple-touch-icon" href="/icon.svg">
+  <style>
+    :root { --bg: #f2f2f7; }
+    html,body{height:100%;margin:0;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","SF Pro Display",system-ui,Segoe UI,Roboto,Helvetica,Arial; background:var(--bg);}
+    .wrap{height:100%;display:flex;align-items:center;justify-content:center;padding:20px;position:relative;overflow:hidden}
+
+    /* particle canvas behind UI */
+    #particleCanvas{position:absolute;inset:0;pointer-events:none;z-index:0}
+
+    .shell{position:relative;z-index:5;max-width:420px;width:100%;display:flex;align-items:center;justify-content:center}
+
+    .update-box{width:360px;background:rgba(255,255,255,0.9);backdrop-filter:blur(16px);border-radius:28px;padding:30px 22px;box-shadow:0 20px 50px rgba(0,0,0,0.14);text-align:center;}
+    .title{font-size:22px;font-weight:600;color:#111;margin-bottom:6px}
+    .sub{font-size:14px;color:#6e6e73;margin-bottom:18px}
+    p.desc{font-size:14px;color:#3b3b3b;line-height:1.45;margin-bottom:18px}
+
+    .btn{padding:12px 18px;border-radius:14px;border:none;margin:8px;font-size:15px;font-weight:600;cursor:pointer;transition:transform .12s ease}
+    .btn:active{transform:scale(.97)}
+    .install{background:#007aff;color:#fff}
+    .later{background:#e5e5ea;color:#111}
+
+    /* progress */
+    #progressContainer{display:none;margin-top:12px}
+    .progress-bar-bg{height:10px;background:#dcdde0;border-radius:7px;overflow:hidden}
+    .progress-bar-fill{height:10px;width:0;background:#007aff;border-radius:7px;transition:width .15s linear}
+
+    /* message box (iMessage style) */
+    #messageBox{display:none;position:relative}
+    .typing{margin:0 auto 16px auto;width:54px;height:26px;background:#efeff4;border-radius:16px;display:flex;align-items:center;justify-content:center}
+    .dot{width:6px;height:6px;border-radius:50%;background:#666;margin:0 3px;animation:bounce 1.2s infinite}
+    .dot:nth-child(2){animation-delay:.15s}
+    .dot:nth-child(3){animation-delay:.3s}
+    @keyframes bounce{0%,80%,100%{transform:translateY(0)}40%{transform:translateY(-6px)}}
+
+    .bubble{background:#007aff;color:#fff;padding:14px 16px;border-radius:18px;font-size:16px;display:inline-block;text-align:left;max-width:86%}
+
+    /* install banner */
+    #installBanner{position:fixed;left:16px;right:16px;bottom:22px;background:rgba(255,255,255,0.98);backdrop-filter:blur(10px);padding:12px;border-radius:14px;box-shadow:0 10px 30px rgba(0,0,0,0.12);display:flex;align-items:center;gap:12px;z-index:20}
+    #installBanner button{background:#007aff;color:#fff;border:none;padding:9px 12px;border-radius:10px;font-weight:600}
+
+    /* small responsive tweaks */
+    @media (max-width:420px){.update-box{width:92%}}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <canvas id="particleCanvas"></canvas>
+    <div class="shell">
+      <div class="update-box" id="updateBox">
+        <div class="title">Relationship OS — Update Available</div>
+        <div class="sub">Version 11.0 (Monthsary Patch)</div>
+        <p class="desc">• Love stability fixes<br>• Improved communication engine<br>• Stronger long-distance signal<br>• Heart module reboot option</p>
+
+        <div id="controls">
+          <button class="btn install" id="installBtn">Install Now</button>
+          <button class="btn later" id="laterBtn">Later</button>
+        </div>
+
+        <div id="progressContainer">
+          <p style="margin:8px 0 10px 0;color:#444;font-size:14px">Installing...</p>
+          <div class="progress-bar-bg"><div class="progress-bar-fill" id="progressBar"></div></div>
+        </div>
+      </div>
+
+      <div id="messageBox"></div>
+    </div>
+
+    <!-- Spotify embed -->
+    <div id="spotifyPlayer" style="position:fixed;bottom:10px;left:50%;transform:translateX(-50%);z-index:10;">
+      <iframe
+        src="https://open.spotify.com/embed/track/4EOX55nAz4ur26uybx77jN?utm_source=generator"
+        width="300"
+        height="80"
+        frameborder="0"
+        allow="encrypted-media"
+        loading="lazy">
+      </iframe>
+    </div>
+  </div>
+
+  <!-- Add to Home Screen banner (for non-automatic) -->
+  <div id="installBanner" style="display:none">
+    <div style="flex:1">Add this to your Home Screen for a special surprise.</div>
+    <button id="installA2HS">Add</button>
+    <button id="dismissA2HS" style="background:#e5e5ea;color:#111">Dismiss</button>
+  </div>
+
+  <script>
+    // -- Particle hearts behind the UI
+    const canvas = document.getElementById('particleCanvas');
+    const ctx = canvas.getContext('2d');
+    let DPR = window.devicePixelRatio || 1;
+    function resizeCanvas(){canvas.width = window.innerWidth*DPR; canvas.height = window.innerHeight*DPR; canvas.style.width = window.innerWidth+'px'; canvas.style.height = window.innerHeight+'px'; ctx.setTransform(DPR,0,0,DPR,0,0)}
+    window.addEventListener('resize', resizeCanvas); resizeCanvas();
+
+    class Heart{constructor(x,y,vy,scale,life){this.x=x;this.y=y;this.vy=vy;this.scale=scale;this.life=life;this.age=0;this.alpha=1}
+      draw(t){ctx.save();ctx.globalAlpha=this.alpha;ctx.translate(this.x,this.y);ctx.scale(this.scale,this.scale);ctx.beginPath();ctx.moveTo(0,-8);ctx.bezierCurveTo(12,-30,45,-18,0,40);ctx.bezierCurveTo(-45,-18,-12,-30,0,-8);ctx.fillStyle='#ff2d55';ctx.fill();ctx.restore()}
+      step(dt){this.age+=dt;this.y+=this.vy*dt;this.alpha = Math.max(0,1 - this.age/this.life)}
+    }
+
+    let hearts=[]; function spawnHeart(){const x = (window.innerWidth*0.2) + Math.random()* (window.innerWidth*0.6); const y = window.innerHeight + 20; const vy = -50 - Math.random()*40; const scale = 0.6 + Math.random()*0.7; const life = 4 + Math.random()*2; hearts.push(new Heart(x,y,vy,scale,life))}
+    setInterval(spawnHeart, 550);
+
+    let last=performance.now(); function loop(now){const dt=(now-last)/1000;last=now;ctx.clearRect(0,0,canvas.width,canvas.height);for(let i=hearts.length-1;i>=0;i--){const h=hearts[i];h.step(dt);h.draw(now);if(h.age>h.life)hearts.splice(i,1)}requestAnimationFrame(loop)}requestAnimationFrame(loop);
+
+    // -- Progress + typing + sounds
+    const installBtn = document.getElementById('installBtn');
+    const laterBtn = document.getElementById('laterBtn');
+    const progressContainer = document.getElementById('progressContainer');
+    const progressBar = document.getElementById('progressBar');
+    const updateBox = document.getElementById('updateBox');
+    const messageBox = document.getElementById('messageBox');
+
+    // WebAudio for ding
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    const audioCtx = AudioContext ? new AudioContext() : null;
+    function playDing(){if(!audioCtx) return; const o = audioCtx.createOscillator(); const g = audioCtx.createGain(); o.type='sine'; o.frequency.setValueAtTime(1200,audioCtx.currentTime); g.gain.setValueAtTime(0.0001,audioCtx.currentTime); g.gain.exponentialRampToValueAtTime(0.1,audioCtx.currentTime+0.01); o.connect(g); g.connect(audioCtx.destination); o.start(); o.frequency.exponentialRampToValueAtTime(800,audioCtx.currentTime+0.18); g.gain.exponentialRampToValueAtTime(0.0001,audioCtx.currentTime+0.35); setTimeout(()=>{o.stop()},420)}
+
+    // show final message after progress
+    function showFinalMessage(){
+      updateBox.style.display='none';
+      messageBox.style.display='block';
+      messageBox.innerHTML = `<div class="typing"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>`;
+      setTimeout(()=>{
+        messageBox.innerHTML = `<div class="bubble">Update complete. Heart reboot successful.
+
+If you're open to this… can we start again? Will you be my girlfriend?</div>`;
+        if(audioCtx && audioCtx.state === 'suspended'){audioCtx.resume().then(()=>{playDing();});} else {playDing();}
+      },1400);
+    }
+
+    function startInstall(){
+      installBtn.disabled = true; laterBtn.disabled = true; document.getElementById('controls').style.opacity = 0.6;
+      progressContainer.style.display = 'block'; let w=0; const id = setInterval(()=>{w += 2.8; progressBar.style.width = w + '%'; if(w>=100){clearInterval(id); setTimeout(showFinalMessage,280);} },85);
+    }
+
+    installBtn.addEventListener('click', ()=>{ startInstall(); });
+    laterBtn.addEventListener('click', ()=>{ window.navigator.vibrate?.(10); updateBox.style.transform = 'translateY(8px)'; setTimeout(()=>{updateBox.style.transform='';},260); });
+
+    // -- Add to Home Screen prompt handling
+    let deferredPrompt = null; const installBanner = document.getElementById('installBanner');
+    window.addEventListener('beforeinstallprompt', (e)=>{ e.preventDefault(); deferredPrompt = e; installBanner.style.display = 'flex'; });
+    document.getElementById('installA2HS').addEventListener('click', async ()=>{ if(!deferredPrompt) return; deferredPrompt.prompt(); const choice = await deferredPrompt.userChoice; if(choice.outcome === 'accepted'){ installBanner.style.display='none'; } deferredPrompt = null; });
+    document.getElementById('dismissA2HS').addEventListener('click', ()=>{ installBanner.style.display='none'; });
+
+    // -- Service worker registration
+    if('serviceWorker' in navigator){ navigator.serviceWorker.register('/sw.js').catch(()=>{/*ignore*/}); }
+
+  </script>
+</body>
+</html>
