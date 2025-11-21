@@ -132,9 +132,21 @@
       messageBox.style.display='block';
       messageBox.innerHTML = `<div class="typing"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>`;
       setTimeout(()=>{
-        messageBox.innerHTML = `<div class="bubble">Update complete. Heart reboot successful.
+        messageBox.innerHTML = `<div class="bubble">Update complete...
 
-If you're open to this… can we start again? Will you be my girlfriend?</div>`;
+It’s me again — it’s that time again. I can’t even remember how many times I’ve done this, to the point that it feels like I ask you this every month. Maybe by now, you find me corny or even a little cringe. But you know what they say, it’s real when it’s corny. Eme lang, I totally made that up.
+
+Kidding aside, if you remember what I wrote in the handwritten letter I gave you on our first month, I said I could write a thousand (or even more) letters if I had to. I’ll never run out of words when it’s for you and about you.
+
+I know we’ve grown apart these past few months, and whether we admit it or not, in that short time we’ve already missed so much of each other’s lives. But the good thing is, after all the chaos our relationship went through, we still somehow find our way back to each other.
+
+Just talking to you already makes such a difference, and I won’t deny how calm and okay life feels whenever I get to talk to you. And yes, that should be enough — but I want to talk to you in a way where I can express my love freely. I want to love you without limits, without hesitation, without feeling like we need to hold back from each other. I want the love of my life back, Mj.
+
+I don’t know how many times I’ve asked this, but like I always say, I don't mind asking over and over as long as it’s you.
+
+Mj, let me be there to end this year with you, and start another one with you.
+
+Will you be my girlfriend again?</div>`;
         if(audioCtx && audioCtx.state === 'suspended'){audioCtx.resume().then(()=>{playDing();});} else {playDing();}
       },1400);
     }
